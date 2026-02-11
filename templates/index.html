@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Transcript Analyzer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>UD - ClipNote</h1>
+            <p>Upload a video, get transcripts with timestamps, and search for keywords with highlighted segments</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Upload Section -->
+            <div class="upload-section">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-content">
+                        <h3>Upload Your Video</h3>
+                        <p>Drag and drop your video file here or click to browse</p>
+                        <input type="file" id="videoFile" accept="video/*" style="display: none;">
+                        <button class="upload-btn" onclick="document.getElementById('videoFile').click()">
+                            Choose Video File
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Player Section -->
+            <div class="video-section" id="videoSection" style="display: none;">
+                <div class="video-container">
+                    <video id="videoPlayer" controls>
+                        <source id="videoSource" src="" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+                
+                <!-- Timeline Section -->
+                <div class="timeline-section" id="timelineSection" style="display: none;">
+                    <h3>Video Timeline</h3>
+                    <div class="timeline-container">
+                        <div class="timeline" id="timeline"></div>
+                    </div>
+                    <div class="timeline-legend">
+                        <div class="legend-item">
+                            <div class="legend-color keyword-explicit"></div>
+                            <span>Explicit mentions</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color keyword-related"></div>
+                            <span>Semantically related</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color normal-segment"></div>
+                            <span>Other content</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="video-info">
+                    <h3>Video Information</h3>
+                    <div id="videoInfo"></div>
+                </div>
+            </div>
+
+            <!-- Search Section -->
+            <div class="search-section" id="searchSection" style="display: none;">
+                <div class="search-container">
+                    <h3>Search for Keywords</h3>
+                    <div class="search-input-group">
+                        <input type="text" id="keywordInput" placeholder="Enter keyword to search..." />
+                        <button id="searchBtn" class="search-btn">Search</button>
+                    </div>
+                    <div class="suggested-keywords" id="suggestedKeywords"></div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <div class="results-container">
+                    <h3>Search Results</h3>
+                    <div class="results-summary" id="resultsSummary"></div>
+                    
+                    <div class="transcript-container">
+                        <h4>Transcript with Keyword Highlights</h4>
+                        <div class="transcript-content" id="transcriptContent"></div>
+                    </div>
+                    
+                    <div class="ai-analysis" id="aiAnalysis"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Processing your video...</p>
+        </div>
+
+        <!-- Error Modal -->
+        <div class="error-modal" id="errorModal" style="display: none;">
+            <div class="error-content">
+                <h3>Error</h3>
+                <p id="errorMessage"></p>
+                <button onclick="closeErrorModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
+
