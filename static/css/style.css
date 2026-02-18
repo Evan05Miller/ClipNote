@@ -582,3 +582,136 @@ header p {
 .transcript-content::-webkit-scrollbar-thumb:hover {
     background: #ffd700;
 }
+.notes-tab {
+    position: fixed;
+    top: 25px;
+    right: -380px;
+    z-index: 1000;
+    transition: right 0.4s ease;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.notes-tab.open {
+    right: 0;
+}
+
+.notes-tab:hover:not(.open) {
+    right: 0;
+}
+
+.notes-tab-header {
+    background: #1a2f5a;
+    width: 420px;
+    height: 60px;
+    border-radius: 12px 0 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    cursor: pointer;
+    box-shadow: -6px 0 18px rgba(0,0,0,0.35);
+    border: 2px solid #4a5f8a;
+    border-right: none;
+    margin-left: -40px;
+    box-sizing: border-box;
+    transition: background-color 0.3s ease;
+}
+
+.notes-tab-header.locked {
+    background: #0f1a2e;
+}
+
+.notes-icon {
+    font-size: 1.8rem;
+    color: #ffffff;
+}
+
+.notes-panel {
+    background: #1a2f5a;
+    width: 380px;
+    height: 700px;
+    border-radius: 12px 0 0 12px;
+    box-shadow: -6px 0 18px rgba(0,0,0,0.35);
+    border: 2px solid #4a5f8a;
+    border-right: none;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+.notes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 24px;
+    background: #253a5f;
+    border-bottom: 1px solid #4a5f8a;
+}
+
+.notes-header h4 {
+    color: #ffffff;
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+
+.notes-close {
+    background: none;
+    border: none;
+    color: #a0a0a0;
+    font-size: 1.7rem;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.notes-close:hover {
+    background: #4a5f8a;
+    color: #ffffff;
+}
+
+.notes-editor {
+    flex: 1;
+    padding: 20px 24px;
+    background: #253a5f;
+    border: none;
+    color: #ffffff;
+    font-size: 1.05rem;
+    line-height: 1.6;
+    resize: none;
+    outline: none;
+}
+
+.notes-editor::placeholder {
+    color: #a0a0a0;
+}
+
+.notes-editor:focus {
+    background: #2d4569;
+}
+
+@media (max-width: 768px) {
+    .notes-tab {
+        top: 10px;
+        right: -280px;
+    }
+
+    .notes-tab.open {
+        right: 0;
+    }
+
+    .notes-panel {
+        width: 280px;
+        height: 350px;
+    }
+
+    .notes-tab-header {
+        width: 310px;
+        margin-left: -30px;
+    }
+}

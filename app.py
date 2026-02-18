@@ -155,7 +155,7 @@ KeyWords: word1, word2, phrase1
 """).strip()
 
         keywords = []
-        match = re.search(r'KeyWords?:\s*(.+)', summary_text, re.IGNORECASE)
+        match = re.search(r'KeyWords?:\s(.+)', summary_text, re.IGNORECASE)
         if match:
             raw = [k.strip() for k in re.split(r'[,;]', match.group(1))]
             keywords = [k for k in raw if 1 <= len(k.split()) <= 3][:15]

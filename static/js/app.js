@@ -8,6 +8,7 @@ class VideoTranscriptAnalyzer {
         this.videoPlayer = null;
         this.initializeEventListeners();
         this.setupDragAndDrop();
+        this.initializeNotes();
     }
     initializeEventListeners() {
         const videoFileInput = document.getElementById('videoFile');
@@ -53,6 +54,58 @@ class VideoTranscriptAnalyzer {
                 fileInput.click();
             }
         });
+    }
+    initializeNotes() {
+        const notesEditor = document.getElementById('notesEditor');
+        const notesClose = document.getElementById('notesClose');
+        const notesTab = document.getElementById('notesTab');
+        const notesTabHeader = document.querySelector('.notes-tab-header');
+        
+        // Load saved notes from localStorage
+        if (notesEditor) {
+            const savedNotes = localStorage.getItem('clipnote-notes');
+            if (savedNotes) {
+                notesEditor.value = savedNotes;
+            }
+            
+            // Save notes on input
+            notesEditor.addEventListener('input', () => {
+                localStorage.setItem('clipnote-notes', notesEditor.value);
+            });
+        }
+        
+        // Toggle tab on header click
+        if (notesTabHeader) {
+            notesTabHeader.addEventListener('click', () => {
+                notesTab.classList.toggle('open');
+                notesTabHeader.classList.toggle('locked');
+            });
+        }
+        
+        // Close button functionality
+        if (notesClose) {
+            notesClose.addEventListener('click', (e) => {
+                e.stopPropagation();
+                notesTab.classList.remove('open');
+                notesTabHeader.classList.remove('locked');
+            });
+        }
+        
+        // Handle responsive width for mobile
+        const handleResize = () => {
+            const notesTab = document.getElementById('notesTab');
+            if (window.innerWidth <= 768) {
+                if (!notesTab.classList.contains('open')) {
+                    notesTab.style.right = '-50px';
+                }
+            } else {
+                if (!notesTab.classList.contains('open')) {
+                    notesTab.style.right = '-50px';
+                }
+            }
+        };
+        
+        window.addEventListener('resize', handleResize);
     }
     handleFileSelect(event) {
         const target = event.target;
