@@ -770,6 +770,10 @@ header p {
     padding-right: 40px; /* spacing from right edge */
 }
 
+.sidebar-header.locked {
+    background: #0f1a2e;
+}
+
 /* Sidebar content */
 .sidebar-content {
     flex: 1;

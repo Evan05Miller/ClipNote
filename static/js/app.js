@@ -117,6 +117,7 @@ class VideoTranscriptAnalyzer {
         if (sidebarHeader && sidebar) {
             sidebarHeader.addEventListener('click', () => {
                 sidebar.classList.toggle('open');
+                sidebarHeader.classList.toggle('locked');
             });
         }
         
@@ -423,7 +424,7 @@ class VideoTranscriptAnalyzer {
             const keywordInput = document.getElementById('keywordInput');
             aiAnalysis.innerHTML = `
                 <h4> AI Analysis for "${keywordInput?.value || 'keyword'}"</h4>
-                <div style="white-space: pre-line; line-height: 1.6;">${result.llm_result.keyword_script}</div>
+                <div contenteditable="true" class="editable-analysis" style="white-space: pre-line; line-height: 1.6; border: 1px solid #4a5f8a; padding: 10px; border-radius: 5px; background: #1a2f5a; color: #ffffff; min-height: 100px;">${result.llm_result.keyword_script}</div>
             `;
         }
         if (resultsSection) {
