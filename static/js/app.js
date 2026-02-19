@@ -6,9 +6,11 @@ class VideoTranscriptAnalyzer {
         this.transcriptData = null;
         this.keywordSegments = { explicit: [], related: [] };
         this.videoPlayer = null;
+        this.keywordHistory = {};
         this.initializeEventListeners();
         this.setupDragAndDrop();
         this.initializeNotes();
+        this.initializeKeywordHistorySidebar();
     }
     initializeEventListeners() {
         const videoFileInput = document.getElementById('videoFile');
@@ -107,6 +109,28 @@ class VideoTranscriptAnalyzer {
         
         window.addEventListener('resize', handleResize);
     }
+    initializeKeywordHistorySidebar() {
+        const sidebar = document.getElementById('keywordHistorySidebar');
+        const sidebarHeader = document.querySelector('.sidebar-header');
+        
+        // Toggle sidebar on header click
+        if (sidebarHeader && sidebar) {
+            sidebarHeader.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+            });
+        }
+        
+        // Handle responsive width for mobile
+        const handleResize = () => {
+            if (window.innerWidth <= 768) {
+                if (!sidebar.classList.contains('open')) {
+                    sidebar.style.left = '-50px';
+                }
+            }
+        };
+        window.addEventListener('resize', handleResize);
+        handleResize();
+    }
     handleFileSelect(event) {
         const target = event.target;
         const file = target.files?.[0];
@@ -134,7 +158,17 @@ class VideoTranscriptAnalyzer {
             this.currentFileId = result.file_id;
             this.currentVideoUrl = `/video/${result.video_filename}`;
             this.transcriptData = result.transcript_data;
+            // Add to keyword history
+            this.keywordHistory[this.currentFileId] = { 
+                name: file.name, 
+                keywords: [], 
+                video_filename: result.video_filename,
+                transcriptData: result.transcript_data,
+                suggestedKeywords: result.llm_result ? result.llm_result.keywords || [] : []
+            };
+            this.updateKeywordHistorySidebar();
             await this.displayVideo(result);
+            this.clearResults();
             this.hideLoadingOverlay();
         }
         catch (error) {
@@ -304,6 +338,12 @@ class VideoTranscriptAnalyzer {
             }
             this.displaySearchResults(result);
             this.displayTimeline(this.keywordSegments);
+            // Add keyword to history with results
+            const existing = this.keywordHistory[this.currentFileId].keywords.find(k => k.keyword === keyword);
+            if (!existing) {
+                this.keywordHistory[this.currentFileId].keywords.push({ keyword, results: result });
+                this.updateKeywordHistorySidebar();
+            }
             this.hideLoadingOverlay();
         }
         catch (error) {
@@ -498,6 +538,128 @@ class VideoTranscriptAnalyzer {
         if (errorModal) {
             errorModal.style.display = 'none';
         }
+    }
+    updateKeywordHistorySidebar() {
+        const sidebarContent = document.getElementById('sidebarContent');
+        if (!sidebarContent) return;
+        sidebarContent.innerHTML = '';
+        const videos = Object.entries(this.keywordHistory);
+        if (videos.length === 0) {
+            sidebarContent.innerHTML = '<p style="color: #e0e0e0; padding: 10px;">No videos uploaded yet. Upload a video to start building your keyword history.</p>';
+            return;
+        }
+        for (const [fileId, videoData] of videos) {
+            const section = document.createElement('div');
+            section.className = 'video-history-section';
+            section.innerHTML = `<h5>${videoData.name}</h5>`;
+            videoData.keywords.forEach(item => {
+                const keywordDiv = document.createElement('div');
+                keywordDiv.className = 'keyword-item';
+                if (fileId === this.currentFileId) {
+                    keywordDiv.classList.add('active');
+                }
+                keywordDiv.textContent = item.keyword;
+                keywordDiv.addEventListener('click', () => {
+                    // Switch to this video if not current
+                    if (fileId !== this.currentFileId) {
+                        this.switchToVideo(fileId);
+                    }
+                    // Load results if cached, else search
+                    if (item.results) {
+                        this.displayCachedResults(item.results, item.keyword);
+                    } else {
+                        const keywordInput = document.getElementById('keywordInput');
+                        if (keywordInput) {
+                            keywordInput.value = item.keyword;
+                            this.performSearch();
+                        }
+                    }
+                });
+                section.appendChild(keywordDiv);
+            });
+            sidebarContent.appendChild(section);
+        }
+    }
+    async switchToVideo(fileId) {
+        const videoData = this.keywordHistory[fileId];
+        if (!videoData) return;
+        this.currentFileId = fileId;
+        this.currentVideoUrl = `/video/${videoData.video_filename}`;
+        this.transcriptData = videoData.transcriptData;
+        // Update video display
+        const videoSection = document.getElementById('videoSection');
+        const searchSection = document.getElementById('searchSection');
+        const videoSource = document.getElementById('videoSource');
+        const videoPlayer = document.getElementById('videoPlayer');
+        if (videoSource) {
+            videoSource.src = this.currentVideoUrl;
+        }
+        if (videoPlayer) {
+            videoPlayer.load();
+        }
+        if (videoSection) {
+            videoSection.style.display = 'block';
+        }
+        if (searchSection) {
+            searchSection.style.display = 'block';
+        }
+        // Update video info
+        const videoInfo = document.getElementById('videoInfo');
+        if (videoInfo && this.transcriptData) {
+            videoInfo.innerHTML = `
+                <p><strong>Status:</strong> Video loaded from history</p>
+                <p><strong>Transcript segments:</strong> ${this.transcriptData.length}</p>
+                <p><strong>Loaded:</strong> ${new Date().toLocaleString()}</p>
+            `;
+        }
+        // Clear previous results
+        this.clearResults();
+        this.updateKeywordHistorySidebar();
+        // Display suggested keywords for this video
+        if (videoData.suggestedKeywords && videoData.suggestedKeywords.length > 0) {
+            this.displaySuggestedKeywordsFromArray(videoData.suggestedKeywords);
+        }
+    }
+    displayCachedResults(result, keyword) {
+        // Handle new format with explicit and related segments
+        if (result.keyword_segments && typeof result.keyword_segments === 'object' && 'explicit' in result.keyword_segments) {
+            this.keywordSegments = {
+                explicit: result.keyword_segments.explicit || [],
+                related: result.keyword_segments.related || []
+            };
+        } else {
+            // Fallback for old format
+            this.keywordSegments = {
+                explicit: result.keyword_segments || [],
+                related: []
+            };
+        }
+        this.displaySearchResults(result);
+        this.displayTimeline(this.keywordSegments);
+        // Set the keyword in input
+        const keywordInput = document.getElementById('keywordInput');
+        if (keywordInput) {
+            keywordInput.value = keyword;
+        }
+    }
+    clearResults() {
+        const resultsSection = document.getElementById('resultsSection');
+        const timelineSection = document.getElementById('timelineSection');
+        const keywordInput = document.getElementById('keywordInput');
+        const suggestedKeywordsDiv = document.getElementById('suggestedKeywords');
+        if (resultsSection) {
+            resultsSection.style.display = 'none';
+        }
+        if (timelineSection) {
+            timelineSection.style.display = 'none';
+        }
+        if (keywordInput) {
+            keywordInput.value = '';
+        }
+        if (suggestedKeywordsDiv) {
+            suggestedKeywordsDiv.innerHTML = '';
+        }
+        this.keywordSegments = { explicit: [], related: [] };
     }
 }
 // Global function for keyword selection

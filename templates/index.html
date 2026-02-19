@@ -13,6 +13,16 @@
             <p>Upload a video, get transcripts with timestamps, and search for keywords with highlighted segments</p>
         </header>
 
+        <!-- Keyword History Sidebar -->
+        <div class="keyword-history-sidebar open" id="keywordHistorySidebar">
+            <div class="sidebar-header">
+                <h4>Keyword History</h4>
+            </div>
+            <div class="sidebar-content" id="sidebarContent">
+                <!-- Video sections will be added here dynamically -->
+            </div>
+        </div>
+
         <div class="main-content">
             <!-- Upload Section -->
             <div class="upload-section">
@@ -125,4 +135,3 @@
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
-
