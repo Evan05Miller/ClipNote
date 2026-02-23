@@ -9,7 +9,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>UD - ClipNote</h1>
+            <h1>ClipNote</h1>
             <p>Upload a video, get transcripts with timestamps, and search for keywords with highlighted segments</p>
         </header>
 
@@ -106,7 +106,16 @@
         <!-- Loading Overlay -->
         <div class="loading-overlay" id="loadingOverlay" style="display: none;">
             <div class="loading-spinner"></div>
-            <p>Processing your video...</p>
+            <p id="loadingMessage">Processing your video...</p>
+            <div class="upload-progress" id="processingProgress" style="width: 60%; max-width: 600px; display: none; margin-top: 20px;">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="processingFill" style="width: 0%;"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:0.95rem;color:#e0e0e0;">
+                    <span id="processingLabel">Estimating time...</span>
+                    <span id="processingPercent">0%</span>
+                </div>
+            </div>
         </div>
 
         <!-- Error Modal -->

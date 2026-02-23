@@ -7,6 +7,11 @@ class VideoTranscriptAnalyzer {
         this.keywordSegments = { explicit: [], related: [] };
         this.videoPlayer = null;
         this.keywordHistory = {};
+        // Loading / simulated progress state
+        this.loadingProgress = 0;
+        this.loadingInterval = null;
+        this.loadingStartTime = 0;
+        this.loadingEstimatedMs = 0;
         this.initializeEventListeners();
         this.setupDragAndDrop();
         this.initializeNotes();
@@ -144,7 +149,8 @@ class VideoTranscriptAnalyzer {
             this.showError('Please select a valid video file (MP4, AVI, MOV, MKV, WMV)');
             return;
         }
-        this.showLoadingOverlay();
+        // Start overlay with an estimated progress based on file size
+        this.showLoadingOverlay(file.size);
         try {
             const formData = new FormData();
             formData.append('video', file);
@@ -512,16 +518,120 @@ class VideoTranscriptAnalyzer {
             this.videoPlayer.addEventListener('loadedmetadata', createTimeline, { once: true });
         }
     }
-    showLoadingOverlay() {
+    showLoadingOverlay(fileSize) {
         const loadingOverlay = document.getElementById('loadingOverlay');
+        const processingProgress = document.getElementById('processingProgress');
+        const processingFill = document.getElementById('processingFill');
+        const processingPercent = document.getElementById('processingPercent');
+        const processingLabel = document.getElementById('processingLabel');
         if (loadingOverlay) {
             loadingOverlay.style.display = 'flex';
         }
+        // If we have a file size, show simulated percent progress
+        if (fileSize && processingProgress && processingFill && processingPercent && processingLabel) {
+            processingProgress.style.display = 'block';
+            processingFill.style.width = '0%';
+            processingPercent.textContent = '0%';
+            processingLabel.textContent = 'Estimating time...';
+            this.startLoadingProgress(fileSize);
+        }
+        else if (processingProgress) {
+            processingProgress.style.display = 'none';
+        }
     }
+
     hideLoadingOverlay() {
+        const processingFill = document.getElementById('processingFill');
+        const processingPercent = document.getElementById('processingPercent');
+        const processingLabel = document.getElementById('processingLabel');
         const loadingOverlay = document.getElementById('loadingOverlay');
-        if (loadingOverlay) {
-            loadingOverlay.style.display = 'none';
+        // finalize progress
+        this.stopLoadingProgress(true);
+        if (processingFill) {
+            processingFill.style.width = '100%';
+        }
+        if (processingPercent) {
+            processingPercent.textContent = '100%';
+        }
+        if (processingLabel) {
+            processingLabel.textContent = 'Finished';
+        }
+        // hide overlay after short delay so user sees 100%
+        setTimeout(() => {
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+            }
+            const processingProgress = document.getElementById('processingProgress');
+            if (processingProgress) processingProgress.style.display = 'none';
+        }, 450);
+    }
+
+    startLoadingProgress(fileSize) {
+        // Estimate processing time based on file size (bytes).
+        // Use an approximate throughput (bytes/sec) and clamp to reasonable bounds.
+        // Calibrate throughput using user's metric: 13.5 MB takes 180s (3 minutes)
+        // Use that as the default bytes/sec unless overridden.
+        const sampleMb = 13.5;
+        const sampleSeconds = 180;
+        const defaultBytesPerSecond = Math.round((sampleMb * 1024 * 1024) / sampleSeconds);
+        // Allow reasonable bounds in case of very small/large files
+        const minBytesPerSecond = 50 * 1024; // 50 KB/s
+        const maxBytesPerSecond = 2 * 1024 * 1024; // 2 MB/s
+        const bytesPerSecond = Math.max(minBytesPerSecond, Math.min(maxBytesPerSecond, defaultBytesPerSecond));
+        let estimatedMs = Math.round((fileSize / bytesPerSecond) * 1000);
+        // Clamp between 5s and 600s (10 minutes max)
+        estimatedMs = Math.max(5000, Math.min(600000, estimatedMs));
+        this.loadingEstimatedMs = estimatedMs;
+        this.loadingStartTime = Date.now();
+        this.loadingProgress = 0;
+        // clear any existing interval
+        if (this.loadingInterval) {
+            clearInterval(this.loadingInterval);
+            this.loadingInterval = null;
+        }
+        const processingFill = document.getElementById('processingFill');
+        const processingPercent = document.getElementById('processingPercent');
+        const processingLabel = document.getElementById('processingLabel');
+        this.loadingInterval = setInterval(() => {
+            const elapsed = Date.now() - this.loadingStartTime;
+            const frac = Math.min(1, elapsed / this.loadingEstimatedMs);
+            // target up to 98% before completion
+            const targetPercent = Math.floor(frac * 98);
+            // smooth the progress: move a fraction of the gap each tick (avoid big jumps)
+            if (targetPercent > this.loadingProgress) {
+                const step = Math.max(1, Math.ceil((targetPercent - this.loadingProgress) * 0.25));
+                this.loadingProgress = Math.min(98, this.loadingProgress + step);
+            }
+            if (processingFill) processingFill.style.width = `${this.loadingProgress}%`;
+            if (processingPercent) processingPercent.textContent = `${this.loadingProgress}%`;
+            if (processingLabel) {
+                if (elapsed < this.loadingEstimatedMs) {
+                    processingLabel.textContent = `Processing... (${Math.ceil((this.loadingEstimatedMs - elapsed) / 1000)}s left)`;
+                }
+                else {
+                    processingLabel.textContent = 'Finalizing...';
+                }
+            }
+            // If we've reached near the estimated time, cap at 98 until stopped
+            if (frac >= 1) {
+                this.loadingProgress = Math.min(98, this.loadingProgress);
+            }
+        }, 300);
+    }
+
+    stopLoadingProgress(setComplete = false) {
+        if (this.loadingInterval) {
+            clearInterval(this.loadingInterval);
+            this.loadingInterval = null;
+        }
+        if (setComplete) {
+            this.loadingProgress = 100;
+            const processingFill = document.getElementById('processingFill');
+            const processingPercent = document.getElementById('processingPercent');
+            const processingLabel = document.getElementById('processingLabel');
+            if (processingFill) processingFill.style.width = '100%';
+            if (processingPercent) processingPercent.textContent = '100%';
+            if (processingLabel) processingLabel.textContent = 'Finalizing...';
         }
     }
     showError(message) {
