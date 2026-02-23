@@ -7,6 +7,7 @@ class VideoTranscriptAnalyzer {
         this.keywordSegments = { explicit: [], related: [] };
         this.videoPlayer = null;
         this.keywordHistory = {};
+        this.currentKeyword = null;
         // Loading / simulated progress state
         this.loadingProgress = 0;
         this.loadingInterval = null;
@@ -297,6 +298,8 @@ class VideoTranscriptAnalyzer {
         }
     }
     selectKeyword(keyword) {
+        // remember selected keyword for highlighting in history
+        this.currentKeyword = keyword;
         const keywordInput = document.getElementById('keywordInput');
         if (keywordInput) {
             keywordInput.value = keyword;
@@ -310,6 +313,8 @@ class VideoTranscriptAnalyzer {
             this.showError('Please enter a keyword to search');
             return;
         }
+        // remember the currently searched keyword for UI highlighting
+        this.currentKeyword = keyword;
         if (!this.currentFileId) {
             this.showError('Please upload a video first');
             return;
@@ -666,25 +671,31 @@ class VideoTranscriptAnalyzer {
             videoData.keywords.forEach(item => {
                 const keywordDiv = document.createElement('div');
                 keywordDiv.className = 'keyword-item';
-                if (fileId === this.currentFileId) {
+                // Only highlight the specific keyword for the currently selected video
+                if (fileId === this.currentFileId && this.currentKeyword && item.keyword === this.currentKeyword) {
                     keywordDiv.classList.add('active');
                 }
                 keywordDiv.textContent = item.keyword;
-                keywordDiv.addEventListener('click', () => {
-                    // Switch to this video if not current
+                keywordDiv.addEventListener('click', async () => {
+                    // If switching videos, await the switch so UI updates correctly
                     if (fileId !== this.currentFileId) {
-                        this.switchToVideo(fileId);
+                        await this.switchToVideo(fileId);
                     }
+                    // Set the current keyword to the clicked item and refresh highlight
+                    this.currentKeyword = item.keyword;
                     // Load results if cached, else search
                     if (item.results) {
                         this.displayCachedResults(item.results, item.keyword);
-                    } else {
+                    }
+                    else {
                         const keywordInput = document.getElementById('keywordInput');
                         if (keywordInput) {
                             keywordInput.value = item.keyword;
                             this.performSearch();
                         }
                     }
+                    // Update sidebar so only this keyword is highlighted
+                    this.updateKeywordHistorySidebar();
                 });
                 section.appendChild(keywordDiv);
             });
@@ -694,6 +705,8 @@ class VideoTranscriptAnalyzer {
     async switchToVideo(fileId) {
         const videoData = this.keywordHistory[fileId];
         if (!videoData) return;
+        // when switching videos clear the current keyword selection
+        this.currentKeyword = null;
         this.currentFileId = fileId;
         this.currentVideoUrl = `/video/${videoData.video_filename}`;
         this.transcriptData = videoData.transcriptData;
@@ -751,6 +764,8 @@ class VideoTranscriptAnalyzer {
         const keywordInput = document.getElementById('keywordInput');
         if (keywordInput) {
             keywordInput.value = keyword;
+            // remember the currently selected keyword
+            this.currentKeyword = keyword;
         }
     }
     clearResults() {
