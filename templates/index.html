@@ -9,7 +9,10 @@
 <body>
     <div class="container">
         <header>
-            <h1>ClipNote</h1>
+            <div class="title-row">
+                <h1>ClipNote</h1>
+                <div class="settings-trigger" id="settingsTrigger" title="Settings">⚙️</div>
+            </div>
             <p>Upload a video, get transcripts with timestamps, and search for keywords with highlighted segments</p>
         </header>
 
@@ -124,6 +127,24 @@
                 <h3>Error</h3>
                 <p id="errorMessage"></p>
                 <button onclick="closeErrorModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div class="settings-panel" id="settingsPanel">
+        <div class="settings-header">
+            <h4>Settings</h4>
+            <button id="closeSettings" class="settings-close">✕</button>
+        </div>
+        <div class="settings-body">
+            <div class="setting-row">
+                <label for="fontSizeRange">Text size: <span id="fontSizeLabel">100%</span></label>
+                <input type="range" id="fontSizeRange" min="75" max="125" value="100">
+            </div>
+            <div class="setting-row">
+                <label for="bwToggle">Black & White mode</label>
+                <input type="checkbox" id="bwToggle">
             </div>
         </div>
     </div>

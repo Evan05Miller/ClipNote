@@ -17,6 +17,76 @@ class VideoTranscriptAnalyzer {
         this.setupDragAndDrop();
         this.initializeNotes();
         this.initializeKeywordHistorySidebar();
+        this.initializeSettings();
+    }
+
+    initializeSettings() {
+        // Elements
+        const trigger = document.getElementById('settingsTrigger');
+        const panel = document.getElementById('settingsPanel');
+        const closeBtn = document.getElementById('closeSettings');
+        const fontRange = document.getElementById('fontSizeRange');
+        const fontLabel = document.getElementById('fontSizeLabel');
+        const bwToggle = document.getElementById('bwToggle');
+
+        // Apply saved settings
+        const savedFont = localStorage.getItem('clipnote-font-size');
+        const savedBW = localStorage.getItem('clipnote-bw-mode');
+        if (savedFont && fontRange && fontLabel) {
+            fontRange.value = savedFont;
+            fontLabel.textContent = `${savedFont}%`;
+            this.applyFontSize(Number(savedFont));
+        }
+        if (savedBW !== null && bwToggle) {
+            const enabled = savedBW === '1';
+            bwToggle.checked = enabled;
+            this.applyBWMode(enabled);
+        }
+
+        // Attach click handler so the trigger toggles the settings panel open/closed
+        if (trigger && panel) {
+            trigger.addEventListener('click', () => {
+                panel.classList.toggle('open');
+            });
+        }
+        else if (panel) {
+            // ensure panel is hidden on load
+            panel.classList.remove('open');
+        }
+        if (closeBtn && panel) {
+            closeBtn.addEventListener('click', () => panel.classList.remove('open'));
+        }
+        if (fontRange && fontLabel) {
+            fontRange.addEventListener('input', (e) => {
+                const val = Number(fontRange.value);
+                fontLabel.textContent = `${val}%`;
+                this.applyFontSize(val);
+            });
+            fontRange.addEventListener('change', () => {
+                localStorage.setItem('clipnote-font-size', fontRange.value);
+            });
+        }
+        if (bwToggle) {
+            bwToggle.addEventListener('change', (e) => {
+                const enabled = bwToggle.checked;
+                this.applyBWMode(enabled);
+                localStorage.setItem('clipnote-bw-mode', enabled ? '1' : '0');
+            });
+        }
+    }
+
+    applyFontSize(percent) {
+        // Set root font size (affects rem units)
+        document.documentElement.style.fontSize = `${percent}%`;
+    }
+
+    applyBWMode(enabled) {
+        if (enabled) {
+            document.body.classList.add('bw-mode');
+        }
+        else {
+            document.body.classList.remove('bw-mode');
+        }
     }
     initializeEventListeners() {
         const videoFileInput = document.getElementById('videoFile');
