@@ -1,92 +1,133 @@
-# UD-ClipNote
+# ClipNote
 
-A modern web application that processes video files, generates transcripts with timestamps, and provides intelligent keyword search with highlighted segments, allowing students to easily study with video lectures as a resource.
+ClipNote is a lightweight Flask web application designed to help students and researchers
+extract value from lecture videos, interviews, or any spoken‑word recordings.  Upload a
+video, and the server will generate a timestamped transcript using OpenAI's Whisper model.
+A large language model (Qwen) then analyzes the text to supply summaries, keyword
+suggestions, and even simple study guides.  You can search the transcript for keywords,
+leveraging AI to locate related segments that don't explicitly mention the search term.
+The video and transcript interface let you jump to relevant moments, take notes, and
+keep a history of your searches for later review.
 
-## Features
+---
 
-- Video Upload: Drag & drop or browse to upload video files
-- Automatic Transcription: Uses OpenAI Whisper for accurate speech-to-text conversion
-- Keyword Search: Search for specific keywords in the transcript with keywords provided or custom words
-- Smart Highlighting: Visual highlighting of keyword segments in both transcript and video timeline
-- AI Analysis: Uses Google Gemini AI for intelligent summarization and keyword extraction
-- Interactive Timeline: Click on timeline segments to jump to specific video moments
+## Key Features
+
+- **Drag‑&‑Drop Upload** or browse for video files. Supported formats: MP4, AVI, MOV,
+  MKV, WMV.
+- **Server‑side Transcription:** Whisper model produces a timestamped text file stored
+  under `processed/`.
+- **AI‑Assisted Search:** Type a keyword (or choose a suggested one) and get both
+  explicit hits and related segments identified by the LLM.
+- **Suggested Keywords & Summaries:** The LLM extracts important terms and bullet‑point
+  summaries when processing a file.
+- **Study Guides:** Generate a brief guide focused on any selected keyword.
+- **Interactive Video Player:** Click transcript entries or timeline markers to seek the
+  video.
+- **Local Notes Panel:** Keep personal notes in the sidebar; they persist via `localStorage`.
+- **Keyword History Sidebar:** Quickly revisit past files, keywords, and suggestions.
+- **Settings Panel:** Adjust font size, toggle black‑and‑white mode, and other UI options.
+
+---
 
 ## Installation
 
-1. Clone or download the project files
+1. Clone or unzip the repository.
+2. Create a Python virtual environment (recommended):
 
-2. Install Python dependencies:
+   ```sh
+   python -m venv .venv
+   .\.venv\Scripts\activate      # Windows
+   source .venv/bin/activate       # macOS/Linux
+   ```
 
-   ```bash
+3. Install dependencies:
+
+   ```sh
    pip install -r requirements.txt
    ```
 
-3. Install FFmpeg (required for video processing):
+4. Install **FFmpeg** and ensure it is on your `PATH`:
+   - **Windows:** download a static build from https://ffmpeg.org/download.html
+   - **macOS:** `brew install ffmpeg`
+   - **Linux:** `sudo apt install ffmpeg` (or use your distro's package manager)
 
-   - Windows: Download from https://ffmpeg.org/download.html and add to PATH
-   - macOS: `brew install ffmpeg`
-   - Linux: `sudo apt install ffmpeg`
+5. Create a `.env` file (optional) in the project root with the following variables:
 
-## Usage
-
-1. Start the application:
-
-   ```bash
-   python app.py
+   ```env
+   SECRET_KEY=your-secret-key
+   AI_INTEGRATIONS_OPENAI_BASE_URL=https://api.openai.com/v1
+   AI_INTEGRATIONS_OPENAI_API_KEY=sk-...
    ```
 
-2. Open your browser and go to `http://localhost:5000`
+   Only the API key is strictly required; the base URL defaults to the value of
+   `SECRET_KEY` if you omit it.
 
-3. Upload a video file by dragging and dropping or clicking the upload area
+---
 
-4. Wait for processing
+## Running the App
 
-5. Search for keywords using the search box or click on suggested keywords
+```sh
+python app.py
+```
 
-6. Interact with results:
+Open your browser and navigate to `http://localhost:5000`.
 
-   - Click on highlighted transcript segments to jump to that part of the video
-   - Use the timeline to navigate through the video
-   - View AI-generated analysis for your keyword searches
+1. Upload a supported video file.
+2. Wait for the progress overlay to finish while the server transcribes and analyzes the file.
+3. Explore the generated transcript, suggested keywords, and summary.
+4. Enter a keyword or click a suggested one to search; the results include explicit
+   segments and AI‑related ones.
+5. Use the video controls to jump to points of interest.
+6. Take notes in the sidebar and adjust UI settings as needed.
 
-## Supported Video Formats
+Transcripts are written to `processed/` and videos are served from `uploads/`.
 
-- MP4
-- AVI
-- MOV
-- MKV
-- WMV
+---
 
-## Technical Details
+## Configuration & Environment
 
-- Backend: Flask with CORS support
-- Video Processing: OpenAI Whisper for transcription
-- AI Analysis: Google Gemini API for summarization and keyword extraction
-- Frontend: JavaScript with modern CSS
-- File Storage: Local file system (uploads and processed folders)
+- **API Key** – required for the Qwen model to run.  Set it in `.env` or your shell.
+- **MAX_CONTENT_LENGTH** – default 500 MB; change in `app.py` if needed.
+- **Whisper Model Size** – currently hardcoded to `small` in `transcribe_with_timestamps`.
 
-## Configuration
-
-The application uses your existing Google Gemini API key. Make sure you have:
-- A valid Google Gemini API key
-- Sufficient API quota for video processing
+---
 
 ## Troubleshooting
 
-- Video upload fails: Check file size (max 500MB) and format
-- Transcription fails: Ensure FFmpeg is installed and accessible
-- AI analysis fails:
-- Slow processing: Large videos take longer to process; consider using shorter clips for testing
+- **Upload Fails:** Verify file size/format and that the server is running in the correct
+  directory.
+- **Transcription Errors:** Make sure FFmpeg is installed and accessible by the Python
+  process.
+- **LLM Timeouts/Errors:** Check your network and API quota; log messages appear in the
+  console.
+- **Browser Issues:** Works best in Chrome/Edge/Firefox; Safari has occasional playback
+  quirks.
 
-## Browser Compatibility
+---
 
-- Chrome (recommended)
-- Firefox
-- Safari
-- Edge
+## Development Notes
+
+- There is no database; all state is stored on disk (`uploads/`, `processed/`) or in the
+  browser (`localStorage`).
+- Backend code is in `app.py`; add new LLM prompts or transcript utilities there.
+- Frontend live reload isn't configured – you must refresh the page after editing
+  `static/` or `templates/` files.
+
+---
 
 ## License
 
-This project is for educational and personal use. Created by Evan Miller 
-in conjunction with ATS at the University of Delaware
+Copyright [2025] [Evan D. Miller]
 
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
