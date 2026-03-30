@@ -118,7 +118,7 @@ Transcripts are written to `processed/` and videos are served from `uploads/`.
 
 ## License
 
-Copyright [2025] [Evan D. Miller]
+Copyright [2026] [Evan D. Miller]
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

@@ -1,6 +1,7 @@
 "use strict";
 class VideoTranscriptAnalyzer {
     constructor() {
+        this.storageKey = 'clipnote-app-state';
         this.currentFileId = null;
         this.currentVideoUrl = null;
         this.transcriptData = null;
@@ -18,6 +19,76 @@ class VideoTranscriptAnalyzer {
         this.initializeNotes();
         this.initializeKeywordHistorySidebar();
         this.initializeSettings();
+        this.initializePersistence();
+    }
+
+    initializePersistence() {
+        const rawState = localStorage.getItem(this.storageKey);
+        if (!rawState) {
+            return;
+        }
+
+        try {
+            const parsed = JSON.parse(rawState);
+            if (parsed && typeof parsed === 'object') {
+                this.keywordHistory = parsed.keywordHistory && typeof parsed.keywordHistory === 'object'
+                    ? parsed.keywordHistory
+                    : {};
+                this.currentFileId = typeof parsed.currentFileId === 'string'
+                    ? parsed.currentFileId
+                    : null;
+                this.currentKeyword = typeof parsed.currentKeyword === 'string'
+                    ? parsed.currentKeyword
+                    : null;
+            }
+        }
+        catch (error) {
+            console.warn('Could not restore app state:', error);
+            this.keywordHistory = {};
+            this.currentFileId = null;
+            this.currentKeyword = null;
+        }
+
+        this.updateKeywordHistorySidebar();
+        this.restoreLastSession();
+    }
+
+    saveAppState() {
+        const state = {
+            keywordHistory: this.keywordHistory,
+            currentFileId: this.currentFileId,
+            currentKeyword: this.currentKeyword
+        };
+
+        try {
+            localStorage.setItem(this.storageKey, JSON.stringify(state));
+        }
+        catch (error) {
+            console.warn('Could not save app state:', error);
+        }
+    }
+
+    async restoreLastSession() {
+        if (!this.currentFileId || !this.keywordHistory[this.currentFileId]) {
+            return;
+        }
+
+        await this.switchToVideo(this.currentFileId);
+
+        if (!this.currentKeyword) {
+            return;
+        }
+
+        const currentVideo = this.keywordHistory[this.currentFileId];
+        if (!currentVideo || !Array.isArray(currentVideo.keywords)) {
+            return;
+        }
+
+        const keywordEntry = currentVideo.keywords.find((item) => item.keyword === this.currentKeyword);
+        if (keywordEntry && keywordEntry.results) {
+            this.displayCachedResults(keywordEntry.results, keywordEntry.keyword);
+            this.updateKeywordHistorySidebar();
+        }
     }
 
     initializeSettings() {
@@ -27,21 +98,15 @@ class VideoTranscriptAnalyzer {
         const closeBtn = document.getElementById('closeSettings');
         const fontRange = document.getElementById('fontSizeRange');
         const fontLabel = document.getElementById('fontSizeLabel');
-        const bwToggle = document.getElementById('bwToggle');
 
         // Apply saved settings
         const savedFont = localStorage.getItem('clipnote-font-size');
-        const savedBW = localStorage.getItem('clipnote-bw-mode');
         if (savedFont && fontRange && fontLabel) {
             fontRange.value = savedFont;
             fontLabel.textContent = `${savedFont}%`;
             this.applyFontSize(Number(savedFont));
         }
-        if (savedBW !== null && bwToggle) {
-            const enabled = savedBW === '1';
-            bwToggle.checked = enabled;
-            this.applyBWMode(enabled);
-        }
+
 
         // Attach click handler so the trigger toggles the settings panel open/closed
         if (trigger && panel) {
@@ -66,13 +131,7 @@ class VideoTranscriptAnalyzer {
                 localStorage.setItem('clipnote-font-size', fontRange.value);
             });
         }
-        if (bwToggle) {
-            bwToggle.addEventListener('change', (e) => {
-                const enabled = bwToggle.checked;
-                this.applyBWMode(enabled);
-                localStorage.setItem('clipnote-bw-mode', enabled ? '1' : '0');
-            });
-        }
+
     }
 
     applyFontSize(percent) {
@@ -80,14 +139,7 @@ class VideoTranscriptAnalyzer {
         document.documentElement.style.fontSize = `${percent}%`;
     }
 
-    applyBWMode(enabled) {
-        if (enabled) {
-            document.body.classList.add('bw-mode');
-        }
-        else {
-            document.body.classList.remove('bw-mode');
-        }
-    }
+
     initializeEventListeners() {
         const videoFileInput = document.getElementById('videoFile');
         const searchBtn = document.getElementById('searchBtn');
@@ -245,6 +297,7 @@ class VideoTranscriptAnalyzer {
                 suggestedKeywords: result.llm_result ? result.llm_result.keywords || [] : []
             };
             this.updateKeywordHistorySidebar();
+            this.saveAppState();
             await this.displayVideo(result);
             this.clearResults();
             this.hideLoadingOverlay();
@@ -255,9 +308,17 @@ class VideoTranscriptAnalyzer {
         }
     }
     isValidVideoFile(file) {
-        const validTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/mkv', 'video/wmv'];
-        return validTypes.includes(file.type);
-    }
+    const validTypes = [
+        'video/mp4',
+        'video/x-msvideo',
+        'video/quicktime',
+        'video/x-matroska',
+        'video/x-ms-wmv'
+    ];
+    if (!file.type) return true;
+
+    return validTypes.includes(file.type);
+}
     async displayVideo(result) {
         const videoSection = document.getElementById('videoSection');
         const searchSection = document.getElementById('searchSection');
@@ -273,7 +334,7 @@ class VideoTranscriptAnalyzer {
         if (videoInfo && result.transcript_data) {
             videoInfo.innerHTML = `
                 <p><strong>Status:</strong> Video processed successfully</p>
-                <p><strong>Transcript segments:</strong> ${result.transcript_data.length}</p>
+                <p><strong>Transcript segments:</strong> ${result.transcript_data ? result.transcript_data.length : 0}</p>
                 <p><strong>Processing completed:</strong> ${new Date().toLocaleString()}</p>
             `;
         }
@@ -340,8 +401,11 @@ class VideoTranscriptAnalyzer {
                 console.warn('Invalid keyword:', keyword);
                 return '';
             }
-            const escapedKeyword = keyword.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\\/g, '\\\\');
-            return `<span class="keyword-chip" onclick="app.selectKeyword('${escapedKeyword}')">${keyword}</span>`;
+            const chip = document.createElement("span");
+            chip.className = "keyword-chip";
+            chip.textContent = keyword;
+            chip.addEventListener("click", () => this.selectKeyword(keyword));
+            return chip.outerHTML;
         }).filter(html => html.length > 0).join('');
         
         console.log('Keywords HTML to set:', html);
@@ -370,6 +434,7 @@ class VideoTranscriptAnalyzer {
     selectKeyword(keyword) {
         // remember selected keyword for highlighting in history
         this.currentKeyword = keyword;
+        this.saveAppState();
         const keywordInput = document.getElementById('keywordInput');
         if (keywordInput) {
             keywordInput.value = keyword;
@@ -421,11 +486,19 @@ class VideoTranscriptAnalyzer {
             this.displaySearchResults(result);
             this.displayTimeline(this.keywordSegments);
             // Add keyword to history with results
-            const existing = this.keywordHistory[this.currentFileId].keywords.find(k => k.keyword === keyword);
+            const historyEntry = this.keywordHistory[this.currentFileId];
+
+            if (!historyEntry) return;
+
+            const existing = historyEntry.keywords.find(k => k.keyword === keyword);
             if (!existing) {
                 this.keywordHistory[this.currentFileId].keywords.push({ keyword, results: result });
-                this.updateKeywordHistorySidebar();
             }
+            else {
+                existing.results = result;
+            }
+            this.updateKeywordHistorySidebar();
+            this.saveAppState();
             this.hideLoadingOverlay();
         }
         catch (error) {
@@ -446,60 +519,81 @@ class VideoTranscriptAnalyzer {
                 <p>Total transcript segments: ${result.total_segments}</p>
             `;
         }
-        // Display transcript with highlights
-        if (transcriptContent) {
-            transcriptContent.innerHTML = '';
-            if (this.transcriptData) {
-                // Create sets of segment identifiers for faster lookup
-                const explicitSegments = new Set();
-                const relatedSegments = new Set();
-                
-                // Add explicit segments to set using start time as identifier
-                if (this.keywordSegments.explicit && Array.isArray(this.keywordSegments.explicit)) {
-                    this.keywordSegments.explicit.forEach(ks => {
-                        const key = Math.round(ks.start * 10) / 10;
-                        explicitSegments.add(key);
-                    });
-                }
-                
-                // Add related segments to set using start time as identifier
-                if (this.keywordSegments.related && Array.isArray(this.keywordSegments.related)) {
-                    this.keywordSegments.related.forEach(ks => {
-                        const key = Math.round(ks.start * 10) / 10;
-                        relatedSegments.add(key);
-                    });
-                }
-                
-                this.transcriptData.forEach(segment => {
-                    // Check if segment is explicit, related, or normal
-                    const segmentKey = Math.round(segment.start * 10) / 10;
-                    const isExplicit = explicitSegments.has(segmentKey);
-                    const isRelated = !isExplicit && relatedSegments.has(segmentKey);
-                    
-                    let segmentClass = 'normal';
-                    if (isExplicit) {
-                        segmentClass = 'keyword-explicit';
-                    } else if (isRelated) {
-                        segmentClass = 'keyword-related';
-                    }
-                    
-                    const segmentDiv = document.createElement('div');
-                    segmentDiv.className = `transcript-segment ${segmentClass}`;
-                    segmentDiv.innerHTML = `
-                        <div class="transcript-timestamp">${segment.timestamp}</div>
-                        <div class="transcript-text">${segment.text}</div>
-                    `;
-                    // Add click event to jump to video timestamp
-                    segmentDiv.addEventListener('click', () => {
-                        if (this.videoPlayer) {
-                            this.videoPlayer.currentTime = segment.start;
-                            this.videoPlayer.play();
-                        }
-                    });
-                    transcriptContent.appendChild(segmentDiv);
-                });
-            }
+// Display transcript with highlights
+if (transcriptContent) {
+    transcriptContent.innerHTML = '';
+
+    if (this.transcriptData) {
+
+        // Create sets of segment identifiers for faster lookup
+        const explicitSegments = new Set();
+        const relatedSegments = new Set();
+
+        // Add explicit segments to set using start time as identifier
+        if (this.keywordSegments.explicit && Array.isArray(this.keywordSegments.explicit)) {
+            this.keywordSegments.explicit.forEach(ks => {
+                const key = Math.round(ks.start * 10) / 10;
+                explicitSegments.add(key);
+            });
         }
+
+        // Add related segments to set using start time as identifier
+        if (this.keywordSegments.related && Array.isArray(this.keywordSegments.related)) {
+            this.keywordSegments.related.forEach(ks => {
+                const key = Math.round(ks.start * 10) / 10;
+                relatedSegments.add(key);
+            });
+        }
+
+        // 🚀 PERFORMANCE FIX: use DocumentFragment
+        const fragment = document.createDocumentFragment();
+
+        this.transcriptData.forEach(segment => {
+
+            const segmentKey = Math.round(segment.start * 10) / 10;
+
+            const isExplicit = explicitSegments.has(segmentKey);
+            const isRelated = !isExplicit && relatedSegments.has(segmentKey);
+
+            let segmentClass = 'normal';
+
+            if (isExplicit) {
+                segmentClass = 'keyword-explicit';
+            }
+            else if (isRelated) {
+                segmentClass = 'keyword-related';
+            }
+
+            const segmentDiv = document.createElement('div');
+            segmentDiv.className = `transcript-segment ${segmentClass}`;
+
+            const timestampDiv = document.createElement('div');
+            timestampDiv.className = 'transcript-timestamp';
+            timestampDiv.textContent = segment.timestamp;
+
+            const textDiv = document.createElement('div');
+            textDiv.className = 'transcript-text';
+            textDiv.textContent = segment.text;
+
+            segmentDiv.appendChild(timestampDiv);
+            segmentDiv.appendChild(textDiv);
+
+            // Jump to timestamp on click
+            segmentDiv.addEventListener('click', () => {
+                if (this.videoPlayer) {
+                    this.videoPlayer.currentTime = segment.start;
+                    this.videoPlayer.play();
+                }
+            });
+
+            fragment.appendChild(segmentDiv);
+
+        });
+
+        // Append everything to DOM once
+        transcriptContent.appendChild(fragment);
+    }
+}
         // Display AI analysis
         if (aiAnalysis && result.llm_result.keyword_script) {
             const keywordInput = document.getElementById('keywordInput');
@@ -766,6 +860,7 @@ class VideoTranscriptAnalyzer {
                     }
                     // Update sidebar so only this keyword is highlighted
                     this.updateKeywordHistorySidebar();
+                    this.saveAppState();
                 });
                 section.appendChild(keywordDiv);
             });
@@ -813,6 +908,7 @@ class VideoTranscriptAnalyzer {
         if (videoData.suggestedKeywords && videoData.suggestedKeywords.length > 0) {
             this.displaySuggestedKeywordsFromArray(videoData.suggestedKeywords);
         }
+        this.saveAppState();
     }
     displayCachedResults(result, keyword) {
         // Handle new format with explicit and related segments
@@ -837,6 +933,7 @@ class VideoTranscriptAnalyzer {
             // remember the currently selected keyword
             this.currentKeyword = keyword;
         }
+        this.saveAppState();
     }
     clearResults() {
         const resultsSection = document.getElementById('resultsSection');
@@ -856,6 +953,7 @@ class VideoTranscriptAnalyzer {
             suggestedKeywordsDiv.innerHTML = '';
         }
         this.keywordSegments = { explicit: [], related: [] };
+        this.currentKeyword = null;
     }
 }
 // Global function for keyword selection

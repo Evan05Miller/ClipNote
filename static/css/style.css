@@ -748,18 +748,7 @@ header p {
 .setting-row label { font-size: 0.95rem; }
 .setting-row input[type="range"] { width: 100%; }
 
-/* Black & White Mode: make UI simple black and white */
-body.bw-mode {
-    background: #ffffff !important;
-    color: #000000 !important;
-    filter: grayscale(100%) contrast(120%) brightness(95%);
-}
-body.bw-mode * {
-    background-color: #ffffff !important;
-    color: #000000 !important;
-    border-color: #000000 !important;
-    box-shadow: none !important;
-}
+
 
 @media (max-width: 768px) {
     .notes-tab {
