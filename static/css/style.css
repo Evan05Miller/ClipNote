@@ -747,6 +747,21 @@ header p {
 .setting-row { margin-bottom: 14px; display:flex; flex-direction:column; gap:8px; }
 .setting-row label { font-size: 0.95rem; }
 .setting-row input[type="range"] { width: 100%; }
+.settings-divider { border: none; border-top: 1px solid #4a5f8a; margin: 4px 0 10px; }
+.clear-data-btn {
+    width: 100%;
+    padding: 9px 12px;
+    background: #7a1a1a;
+    border: 1px solid #a83232;
+    border-radius: 6px;
+    color: #f5c6c6;
+    font-size: 0.95rem;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.2s;
+}
+.clear-data-btn:hover { background: #9e2020; }
+.clear-data-hint { font-size: 0.78rem; color: #a0aec0; line-height: 1.4; }
 
 
 

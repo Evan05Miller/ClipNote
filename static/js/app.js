@@ -132,6 +132,40 @@ class VideoTranscriptAnalyzer {
             });
         }
 
+        const clearDataBtn = document.getElementById('clearDataBtn');
+        if (clearDataBtn) {
+            clearDataBtn.addEventListener('click', () => this.clearSavedData());
+        }
+    }
+
+    clearSavedData() {
+        if (!confirm('Clear all saved notes, video history, and keyword history? This cannot be undone.')) {
+            return;
+        }
+        localStorage.removeItem('clipnote-notes');
+        localStorage.removeItem('clipnote-font-size');
+        localStorage.removeItem(this.storageKey);
+
+        // Reset in-memory state
+        this.keywordHistory = {};
+        this.currentFileId = null;
+        this.currentKeyword = null;
+
+        // Clear the notes editor
+        const notesEditor = document.getElementById('notesEditor');
+        if (notesEditor) notesEditor.value = '';
+
+        // Clear the keyword history sidebar
+        this.updateKeywordHistorySidebar();
+
+        // Reset font size UI to default
+        const fontRange = document.getElementById('fontSizeRange');
+        const fontLabel = document.getElementById('fontSizeLabel');
+        if (fontRange && fontLabel) {
+            fontRange.value = 100;
+            fontLabel.textContent = '100%';
+            this.applyFontSize(100);
+        }
     }
 
     applyFontSize(percent) {
