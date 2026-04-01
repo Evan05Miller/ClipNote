@@ -332,8 +332,8 @@ class VideoTranscriptAnalyzer {
             };
             this.updateKeywordHistorySidebar();
             this.saveAppState();
-            await this.displayVideo(result);
             this.clearResults();
+            await this.displayVideo(result);
             this.hideLoadingOverlay();
         }
         catch (error) {
@@ -400,6 +400,7 @@ class VideoTranscriptAnalyzer {
             }
         }
         this.videoPlayer = videoPlayer;
+        this.displayTimeline({ explicit: [], related: [] });
     }
     displaySuggestedKeywordsFromArray(keywords) {
         console.log('displaySuggestedKeywordsFromArray called with:', keywords);
@@ -429,22 +430,22 @@ class VideoTranscriptAnalyzer {
         // Display keywords from array (limit to 8)
         const displayKeywords = keywords.slice(0, 8);
         console.log('Displaying keywords:', displayKeywords);
-        
-        const html = displayKeywords.map(keyword => {
+
+        suggestedKeywordsDiv.innerHTML = '';
+        const fragment = document.createDocumentFragment();
+        displayKeywords.forEach(keyword => {
             if (!keyword || typeof keyword !== 'string') {
                 console.warn('Invalid keyword:', keyword);
-                return '';
+                return;
             }
-            const chip = document.createElement("span");
-            chip.className = "keyword-chip";
+            const chip = document.createElement('span');
+            chip.className = 'keyword-chip';
             chip.textContent = keyword;
-            chip.addEventListener("click", () => this.selectKeyword(keyword));
-            return chip.outerHTML;
-        }).filter(html => html.length > 0).join('');
-        
-        console.log('Keywords HTML to set:', html);
-        suggestedKeywordsDiv.innerHTML = html;
-        console.log('Keywords HTML set successfully. Element innerHTML:', suggestedKeywordsDiv.innerHTML);
+            chip.addEventListener('click', () => this.selectKeyword(keyword));
+            fragment.appendChild(chip);
+        });
+        suggestedKeywordsDiv.appendChild(fragment);
+        console.log('Keywords rendered successfully. Count:', displayKeywords.length);
     }
     displaySuggestedKeywords(summary) {
         const suggestedKeywordsDiv = document.getElementById('suggestedKeywords');
@@ -459,10 +460,16 @@ class VideoTranscriptAnalyzer {
                 .map(k => k.trim())
                 .filter(k => k.length > 0)
                 .slice(0, 8);
-            suggestedKeywordsDiv.innerHTML = keywords.map(keyword => {
-                const escapedKeyword = keyword.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                return `<span class="keyword-chip" onclick="app.selectKeyword('${escapedKeyword}')">${keyword}</span>`;
-            }).join('');
+            suggestedKeywordsDiv.innerHTML = '';
+            const fragment = document.createDocumentFragment();
+            keywords.forEach(keyword => {
+                const chip = document.createElement('span');
+                chip.className = 'keyword-chip';
+                chip.textContent = keyword;
+                chip.addEventListener('click', () => this.selectKeyword(keyword));
+                fragment.appendChild(chip);
+            });
+            suggestedKeywordsDiv.appendChild(fragment);
         }
     }
     selectKeyword(keyword) {
@@ -954,6 +961,7 @@ if (transcriptContent) {
         if (videoPlayer) {
             videoPlayer.load();
         }
+        this.videoPlayer = videoPlayer;
         if (videoSection) {
             videoSection.style.display = 'block';
         }
@@ -976,6 +984,7 @@ if (transcriptContent) {
         if (videoData.suggestedKeywords && videoData.suggestedKeywords.length > 0) {
             this.displaySuggestedKeywordsFromArray(videoData.suggestedKeywords);
         }
+        this.displayTimeline({ explicit: [], related: [] });
         this.saveAppState();
     }
     displayCachedResults(result, keyword) {
