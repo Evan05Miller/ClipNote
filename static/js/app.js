@@ -628,16 +628,50 @@ if (transcriptContent) {
         transcriptContent.appendChild(fragment);
     }
 }
-        // Display AI analysis
-        if (aiAnalysis && result.llm_result.keyword_script) {
+        // Show the study guide button instead of auto-generating
+        if (aiAnalysis) {
             const keywordInput = document.getElementById('keywordInput');
+            const kw = keywordInput?.value || 'keyword';
             aiAnalysis.innerHTML = `
-                <h4> AI Analysis for "${keywordInput?.value || 'keyword'}"</h4>
-                <div contenteditable="true" class="editable-analysis" style="white-space: pre-line; line-height: 1.6; border: 1px solid #4a5f8a; padding: 10px; border-radius: 5px; background: #1a2f5a; color: #ffffff; min-height: 100px;">${result.llm_result.keyword_script}</div>
+                <button class="study-guide-btn" id="studyGuideBtn">
+                    Generate Study Guide for "${kw}"
+                </button>
             `;
+            document.getElementById('studyGuideBtn').addEventListener('click', () => {
+                this.generateStudyGuide(kw);
+            });
         }
         if (resultsSection) {
             resultsSection.style.display = 'block';
+        }
+    }
+
+    async generateStudyGuide(keyword) {
+        const aiAnalysis = document.getElementById('aiAnalysis');
+        if (!aiAnalysis) return;
+
+        aiAnalysis.innerHTML = `<p class="study-guide-loading">⏳ Generating study guide for "${keyword}"…</p>`;
+
+        try {
+            const response = await fetch('/study-guide', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ file_id: this.currentFileId, keyword })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Failed to generate study guide');
+
+            const script = data.llm_result?.keyword_script || data.llm_result?.summary || 'No content returned.';
+            aiAnalysis.innerHTML = `
+                <h4>Study Guide for "${keyword}"</h4>
+                <div contenteditable="true" class="editable-analysis" style="white-space: pre-line; line-height: 1.6; border: 1px solid #4a5f8a; padding: 10px; border-radius: 5px; background: #1a2f5a; color: #ffffff; min-height: 100px;">${script}</div>
+            `;
+        } catch (error) {
+            aiAnalysis.innerHTML = `
+                <p style="color:#f87171;">Failed to generate study guide: ${error.message}</p>
+                <button class="study-guide-btn" id="studyGuideBtn">↺ Retry</button>
+            `;
+            document.getElementById('studyGuideBtn').addEventListener('click', () => this.generateStudyGuide(keyword));
         }
     }
     displayTimeline(keywordSegments) {

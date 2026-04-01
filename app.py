@@ -250,12 +250,26 @@ def search_keyword():
         transcript_data, keyword, transcript_text
     )
 
-    llm_result = process_transcript_with_llm(transcript_text, keyword)
-
     return jsonify({
         "keyword_segments": keyword_segments,
-        "llm_result": llm_result
+        "total_segments": len(transcript_data)
     })
+
+@app.route('/study-guide', methods=['POST'])
+def study_guide():
+    data = request.get_json()
+    file_id = data.get("file_id")
+    keyword = data.get("keyword")
+
+    transcript_path = os.path.join(PROCESSED_FOLDER, f"{file_id}_transcript.txt")
+    if not os.path.exists(transcript_path):
+        return jsonify({'error': 'Transcript not found'}), 404
+
+    with open(transcript_path, 'r', encoding='utf-8') as f:
+        transcript_text = f.read()
+
+    llm_result = process_transcript_with_llm(transcript_text, keyword)
+    return jsonify({'llm_result': llm_result})
 
 @app.route('/video/<filename>')
 def serve_video(filename):
